@@ -3,116 +3,63 @@
 #![no_std]
 #![deny(missing_docs)]
 
-use core::ops::{Deref, DerefMut};
-
-/// Wraps a value indicating it has
-/// has been successfully validated.
-#[derive(Debug, Clone, Default)]
-pub struct Validated<V: Validate> {
-    /// The wrapped value.
-    value: V,
-}
-
-/// Indicates the validity
-/// of a value.
-#[derive(Debug, Clone)]
-pub enum Validity<Reason> {
-    /// The value is valid.
-    Valid,
-    /// The value is invalid for the
-    /// given reason.
-    InValid(Reason),
-}
-
-/// Implementors of this trait
-/// are granted the ability to be
-/// fallibly wrapped by the [`Validated`]
-/// type.
-pub trait Validate: Sized {
-    /// The possible errors encountered
-    /// enumerating the reasons for invalidity.
+/// Implementors of this trait provide
+/// a validation service for values of the given
+/// source type.
+pub trait Validator<S: Validate<Self>>: Sized {
+    /// Validation error.
     type Error;
 
-    /// Determine the validity of the value.
-    fn validity(&self) -> Validity<Self::Error>;
+    /// Attempt to validate the source value.
+    fn validate(src: S) -> Result<Self, Self::Error>;
+}
 
-    /// Attempt to validate the value as dictated
-    /// by the [`Validate::validity`] of the value.
-    fn validate(self) -> Result<Validated<Self>, Self::Error> {
-        match self.validity() {
-            Validity::Valid => Ok(Validated { value: self }),
-            Validity::InValid(reason) => Err(reason),
-        }
+/// Implementors of this trait have a validator
+/// available to conduct validation.
+pub trait Validate<V: Validator<Self>>: Sized {
+    /// Validate the value via the designated
+    /// [`Validator`].
+    fn validate(self) -> Result<V, V::Error> {
+        Validator::validate(self)
     }
 }
 
-impl<V: Validate + AsRef<V>> AsRef<V> for Validated<V> {
-    fn as_ref(&self) -> &V {
-        self.deref()
-    }
-}
-
-impl<V: Validate + AsMut<V>> AsMut<V> for Validated<V> {
-    fn as_mut(&mut self) -> &mut V {
-        self.deref_mut()
-    }
-}
-
-impl<V: Validate> Deref for Validated<V> {
-    type Target = V;
-
-    fn deref(&self) -> &Self::Target {
-        &self.value
-    }
-}
-
-impl<V: Validate> DerefMut for Validated<V> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.value
-    }
-}
+impl<S, V> Validate<V> for S where V: Validator<S> {}
 
 #[cfg(test)]
 mod tests {
-    use crate::{Validate, Validity};
+    use crate::{Validate, Validator};
 
     pub enum Error {
         TooSmall,
         TooBig,
     }
 
-    impl Validate for u8 {
+    pub struct ValidU8(u8);
+
+    impl Validator<u8> for ValidU8 {
         type Error = Error;
 
-        fn validity(&self) -> Validity<Self::Error> {
-            if *self < 5 {
-                Validity::InValid(Error::TooSmall)
-            } else if *self > 10 {
-                Validity::InValid(Error::TooBig)
+        fn validate(src: u8) -> Result<Self, Self::Error> {
+            if src < 5 {
+                Err(Error::TooSmall)
+            } else if src > 10 {
+                Err(Error::TooBig)
             } else {
-                Validity::Valid
+                Ok(ValidU8(src))
             }
         }
     }
 
     #[test]
-    fn deref() {
-        let validated = 0u8.validate();
+    fn integer() {
+        let validated: Result<ValidU8, _> = 0u8.validate();
         assert!(validated.is_err_and(|e| matches!(e, Error::TooSmall)));
 
-        let validated = 7u8.validate();
-        assert!(validated.is_ok_and(|v| *v == 7));
+        let validated: Result<ValidU8, _> = 7u8.validate();
+        assert!(validated.is_ok_and(|v| v.0 == 7));
 
-        let validated = 11u8.validate();
+        let validated: Result<ValidU8, _> = 11u8.validate();
         assert!(validated.is_err_and(|e| matches!(e, Error::TooBig)));
-    }
-
-    #[test]
-    fn deref_mut() {
-        let validated = 7u8.validate();
-        assert!(validated.is_ok_and(|mut v| {
-            *v += 1;
-            *v == 8
-        }));
     }
 }
