@@ -1,22 +1,41 @@
 //! **Ti**ny **Va**lidation
 
 #![no_std]
+#![deny(missing_docs)]
 
 use core::ops::{Deref, DerefMut};
 
+/// Wraps a value indicating it has
+/// has been successfully validated.
 pub struct Validated<V: Validate> {
+    /// The wrapped value.
     value: V,
 }
 
+/// Indicates the validity
+/// of a value.
 pub enum Validity<Reason> {
+    /// The value is valid.
     Valid,
+    /// The value is invalid for the
+    /// given reason.
     InValid(Reason),
 }
 
+/// Implementors of this trait
+/// are granted the ability to be
+/// fallibly wrapped by the [`Validated`]
+/// type.
 pub trait Validate: Sized {
+    /// The possible errors encountered
+    /// enumerating the reasons for invalidity.
     type Error;
 
+    /// Determine the validity of the value.
     fn validity(&self) -> Validity<Self::Error>;
+
+    /// Attempt to validate the value as dictated
+    /// by the [`Validate::validity`] of the value.
     fn validate(self) -> Result<Validated<Self>, Self::Error> {
         match self.validity() {
             Validity::Valid => Ok(Validated { value: self }),
