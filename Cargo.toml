@@ -2,5 +2,7 @@
 name = "tiva"
 version = "0.1.0"
 edition = "2021"
+description = "A tiny type-enforced validation system."
+license = "GPL-3.0-only"
 
 [dependencies]
