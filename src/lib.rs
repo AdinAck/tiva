@@ -7,6 +7,7 @@ use core::ops::{Deref, DerefMut};
 
 /// Wraps a value indicating it has
 /// has been successfully validated.
+#[derive(Debug, Clone, Default)]
 pub struct Validated<V: Validate> {
     /// The wrapped value.
     value: V,
@@ -14,6 +15,7 @@ pub struct Validated<V: Validate> {
 
 /// Indicates the validity
 /// of a value.
+#[derive(Debug, Clone)]
 pub enum Validity<Reason> {
     /// The value is valid.
     Valid,
