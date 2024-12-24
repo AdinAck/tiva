@@ -44,6 +44,18 @@ pub trait Validate: Sized {
     }
 }
 
+impl<V: Validate + AsRef<V>> AsRef<V> for Validated<V> {
+    fn as_ref(&self) -> &V {
+        self.deref().as_ref()
+    }
+}
+
+impl<V: Validate + AsMut<V>> AsMut<V> for Validated<V> {
+    fn as_mut(&mut self) -> &mut V {
+        self.deref_mut().as_mut()
+    }
+}
+
 impl<V: Validate> Deref for Validated<V> {
     type Target = V;
 
