@@ -11,7 +11,7 @@ pub trait Validator<S: Validate<Self>>: Sized {
     type Error;
 
     /// Attempt to validate the source value.
-    fn validate(src: S) -> Result<Self, Self::Error>;
+    fn from_unvalidated(src: S) -> Result<Self, Self::Error>;
 }
 
 /// Implementors of this trait have a validator
@@ -20,7 +20,7 @@ pub trait Validate<V: Validator<Self>>: Sized {
     /// Validate the value via the designated
     /// [`Validator`].
     fn validate(self) -> Result<V, V::Error> {
-        Validator::validate(self)
+        Validator::from_unvalidated(self)
     }
 }
 
@@ -40,13 +40,13 @@ mod tests {
     impl Validator<u8> for ValidU8 {
         type Error = Error;
 
-        fn validate(src: u8) -> Result<Self, Self::Error> {
+        fn from_unvalidated(src: u8) -> Result<Self, Self::Error> {
             if src < 5 {
                 Err(Error::TooSmall)
             } else if src > 10 {
                 Err(Error::TooBig)
             } else {
-                Ok(ValidU8(src))
+                Ok(Self(src))
             }
         }
     }
